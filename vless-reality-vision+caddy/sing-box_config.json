@@ -1,0 +1,72 @@
+{
+  "inbounds": [
+    {
+      "type": "vless",
+      "tag": "vless-in",
+      "listen": "::",
+      "listen_port": 443,
+      "users": [
+        {
+          "name": “test",
+          "uuid": "3c7e829e-6150-4015-a59a-5bc07da9cb1b",       // sing-box generate uuid 生成
+          "flow": "xtls-rprx-vision"
+        }
+      ],
+      "tls": {
+        "enabled": true,
+        "server_name": “yourdomain.com",                        // SNI中显示的域名
+        "reality": {
+          "enabled": true,
+          "handshake": {
+            "server": "127.0.0.1",                              // 本机web server
+            "server_port": 88                                   // web server提供服务的端口，对照caddy配置
+          },
+          "private_key": "GGvrcJ-MLO0Otd1KdC0Ohr5GUYaIyE7l-JN_a623G2Y",                 // sing-box generate reality-keypair 生成
+          "short_id": "0123456789abcdef"                                                // sing-box generate rand 8 --hex 生成
+        }
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "direct",
+      "tag": "direct"
+    },
+    {
+      "type": "block",
+      "tag": "block"
+    }
+  ],
+  "route": {
+    "rules": [
+      {
+        "ip_is_private": true,
+        "outbound": "block"
+      },
+      {
+        "rule_set": [
+          "geoip-cn",
+          "geosite-category-ads-all"
+        ],
+        "outbound": "block"
+      }
+    ],
+    "rule_set": [
+      {
+        "tag": "geoip-cn",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-cn.srs",
+        "download_detour": "direct"
+      },
+      {
+        "tag": "geosite-category-ads-all",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-category-ads-all.srs",
+        "download_detour": "direct"
+      }
+    ],
+    "final": "direct"                                           // 默认直接出站
+  }
+}
