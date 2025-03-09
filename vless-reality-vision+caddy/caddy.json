@@ -1,0 +1,92 @@
+{
+  "admin": {
+    "disabled": true,
+    "config": {
+      "persist": false
+    }
+  },
+  "logging": {
+    "logs": {
+      "default": {
+        "writer": {
+          "output": "file",
+          "filename": "/var/log/caddy/default.log"
+        },
+        "encoder": {
+          "format": "console"
+        },
+        "level": "WARN"
+      }
+    }
+  },
+  "storage": {
+    "module": "file_system",
+    "root": "/var/lib/caddy/.local/share/caddy/"
+  },
+  "apps": {
+    "http": {
+      "https_port": 88,                                                              // https默认端口为 88
+      "servers": {
+        "srvh1": {
+          "listen": [":80"],                                                         // 侦听80端口，acme使用
+          "routes": [{
+            "handle": [{
+              "handler": "static_response",
+              "headers": {
+                "Location": ["https://{http.request.host}{http.request.uri}"]        // http跳转到https
+              },
+              "status_code": 301                                                     // 301跳转
+            }]
+          }],
+          "protocols": ["h1"]                                                        // http/1.1
+        },
+        "srvh2c": {
+          "listen": ["127.0.0.1:88"],                                                // 在本机地址侦听
+          "listener_wrappers": [{
+            "wrapper": "proxy_protocol"
+          },
+          {
+            "wrapper": "tls"
+          }],
+          "routes": [{
+            "handle": [{
+              "handler": "headers",
+              "response": {
+                "set": {
+                  "Strict-Transport-Security": ["max-age=31536000; includeSubDomains; preload"]    // 启用HSTS
+                }
+              }
+            },
+            {
+              "handler": "file_server",
+              "root": "/usr/share/caddy/character"                                                 // web server根目录
+            }]
+          }],
+          "tls_connection_policies": [{
+            "match": {
+              "sni": [“yourdomain.com"]                                                            // SNI域名
+            },
+            "protocol_min": "tls1.3",
+            "protocol_max": "tls1.3",
+            "cipher_suites": ["TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384","TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256","TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256"],
+            "curves": ["x25519","secp521r1","secp384r1","secp256r1"]
+          }],
+          "protocols": ["h1","h2"]
+        }
+      }
+    },
+    "tls": {                                                                           // acme申请证书
+      "certificates": {
+        "automate": [“yourdomain.com"]
+      },
+      "automation": {
+        "policies": [{
+          "issuers": [{
+            "module": "acme",
+            "email": “youremail"
+          }]
+        }]
+      }
+    }
+  }
+}
